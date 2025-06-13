@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<body lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Atestados Médicos</title>
+    
+    <!-- Bibliotecas Externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://teste-api-consultoriodrgu.replit.app/static/popup-embed.js" defer></script>
+
+    <style>
+        /* Variáveis globais */
+        :root {
+            --primaria: #1B315E;
+            --primaria-clara: #2b4c7e;
+            --texto: #1a202c;
+            --texto-entrada: #000000;
+            --fundo: #f7fafc;
+            --branco: #ffffff;
+            --borda-entrada: #e2e8f0;
+            --foco-entrada: #4299e1;
+            --erro: #e53e3e;
+            --sucesso: #38a169;
+            --placeholder: #4a5568;
+        }
+
+        /* Reset e estilos base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--fundo);
+            color: var(--texto);
+            line-height: 1.5;
+        }
+
+        /* Cabeçalho */
+        .cabecalho {
+            background: var(--primaria);
+            color: var(--branco);
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .cabecalho h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        /* Layout principal */
+        .container-principal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: calc(100vh - 60px);
+        }
+
+        .container-formulario {
+            background: var(--branco);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: fit-content;
+            overflow-y: auto;
+            max-height: calc(100vh - 100px);
+        }
+
+        .container-visualizacao {
+            position: relative;
+            background: var(--branco);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .container-visualizacao::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('https://atestado.drguilipech.com/imagensguili/foto-medico.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: var(--opacity-background, 0.8);
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        /* Seções do formulário */
+        .secao-formulario {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: var(--fundo);
+            border-radius: 8px;
+            border: 1px solid var(--borda-entrada);
+        }
+
+        .titulo-secao {
+            color: var(--primaria);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--borda-entrada);
+        }
+
+        /* Campos do formulário */
+        .grupo-formulario {
+            margin-bottom: 1rem;
+        }
+
+        .linha-formulario {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .entrada,
+        .selecao,
+        .area-texto {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--borda-entrada);
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            background-color: #f5f5f5;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Botões */
+        .botoes {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .botao {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .botao-primario {
+            background: var(--primaria);
+            color: var(--branco);
+        }
+
+        .botao-primario:hover {
+            background: var(--primaria-clara);
+            transform: translateY(-1px);
+        }
+
+        .botao-secundario {
+            background: var(--primaria);
+            color: var(--branco);
+        }
+
+        .botao-secundario:hover {
+            background: var(--primaria-clara);
+            transform: translateY(-1px);
+        }
+
+        /* Estilo para os botões de template */
+        .botoes-template {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: var(--fundo);
+            border-radius: 0.5rem;
+        }
+
+        .botao-template {
+            background-color: #b8d1ff;
+            color: #1B315E;
+            border: 1px solid #9abaff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s ease-in-out;
+            white-space: nowrap;
+        }
+
+        .botao-template:hover {
+            background-color: #a3c2ff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(27, 49, 94, 0.1);
+        }
+
+        /* Container dos botões */
+        .botoes-template {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Chips e templates */
+        .container-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid var(--borda-entrada);
+            border-radius: 0.25rem;
+            min-height: 42px;
+            background: var(--branco);
+        }
+
+        .chip {
+            background: var(--primaria-clara);
+            color: var(--branco);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chip button {
+            background: none;
+            border: none;
+            color: var(--branco);
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        /* Sugestões autocompletar */
+        .sugestoes {
+            position: absolute;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .item-sugestao {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .item-sugestao:hover {
+            background: var(--primaria-clara);
+            color: var(--branco);
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .container-principal {
+                grid-template-columns: 1fr;
+            }
+
+            .linha-formulario {
+                grid-template-columns: 1fr;
+            }
+
+            .botoes {
+                flex-direction: column;
+            }
+
+            .botao {
+                width: 100%;
+            }
+        }
+
+        .botao-limpar {
+            background: var(--erro);
+            color: var(--branco);
+        }
+
+        .botao-limpar:hover {
+            background: #c53030;
+            transform: translateY(-1px);
+        }
+
+        .rubrica {
+            font-family: 'Brush Script MT', cursive;
+            font-size: 24px;
+            color: #1B315E;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        .linha-assinatura {
+            position: relative;
+            border-top: 1px solid #000;
+            margin: 40px 0 10px;
+            width: 250px;
+        }
+
+        /* Container de visualização */
+        .container-visualizacao {
+            position: relative;
+            background: var(--branco);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container-visualizacao::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('https://atestado.drguilipech.com/imagensguili/foto-medico.jpg');
+            background-size: cover;
+            background-position: center;
+            opacity: var(--opacity-background, 0.8);
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        /* Estilos para o container de visualização */
+        .preview-atestado {
+            position: relative;
+            z-index: 2;
+            width: 80%;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .preview-atestado.mostrar {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Formatação do conteúdo */
+        .atestado-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #1B315E;
+        }
+
+        .atestado-header h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1B315E;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .info-medico {
+            font-size: 21px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .subtitulo {
+            font-size: 19px;
+            font-weight: bold;
+            color: #1B315E;
+            margin: 25px 0 15px;
+        }
+
+        .texto-principal {
+            font-size: 19.2px;
+            line-height: 1.8;
+            text-align: justify;
+            margin: 20px 0;
+        }
+
+        .cid-info {
+            font-size: 19px;
+            margin: 25px 0;
+            color: #1B315E;
+            font-weight: 500;
+        }
+
+        .observacoes {
+            font-size: 19px;
+            margin: 25px 0;
+            color: #1B315E;
+            font-weight: 500;
+        }
+
+        /* Estilos para impressão */
+        @media print {
+            .preview-atestado {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            
+            .container-visualizacao::before {
+                display: none;
+            }
+        }
+
+        .autorizacao-paciente {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* Ajuste os estilos do atestado dentro do preview */
+        .atestado-container {
+            width: 157.5mm;  /* 75% de 210mm */
+            min-height: 222.75mm;  /* 75% de 297mm */
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* O container de visualização permanece do mesmo tamanho */
+        .container-visualizacao {
+            position: relative;
+            background: var(--branco);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 2rem;
+        }
+
+        /* O preview também permanece do mesmo tamanho */
+        .preview-atestado {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="sistema-atestados">
+        <header class="cabecalho">
+            <h1>++ Sistema de Atestados Médicos</h1>
+        </header>
+
+        <main class="container-principal">
+            <!-- Container do Formulário (Esquerda) -->
+            <section class="container-formulario">
+                <form id="formularioAtestado">
+                    <!-- Tipo de Atestado -->
+                    <div class="grupo-formulario">
+                        <label for="tipoAtestado">Tipo de Atestado</label>
+                        <select id="tipoAtestado" class="selecao" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="trabalho">Afastamento do Trabalho</option>
+                            <option value="escolar">Afastamento Escolar</option>
+                            <option value="atividade">Atividade Física</option>
+                            <option value="comparecimento">Comparecimento</option>
+                        </select>
+                    </div>
+
+                    <!-- Dados do Mdico -->
+                    <div class="secao-formulario">
+                        <h3 class="titulo-secao">Dados do Médico</h3>
+                        <div class="linha-formulario">
+                            <div class="grupo-formulario">
+                                <label for="medico">Nome do Médico</label>
+                                <input type="text" id="medico" class="entrada" required>
+                                <div id="sugestoesMedico" class="sugestoes"></div>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="crm">CRM</label>
+                                <input type="text" id="crm" class="entrada" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dados do Paciente -->
+                    <div class="secao-formulario">
+                        <h3 class="titulo-secao">Dados do Paciente</h3>
+                        <div class="linha-formulario">
+                            <div class="grupo-formulario">
+                                <label for="paciente">Nome do Paciente</label>
+                                <input type="text" id="paciente" class="entrada" required>
+                                <div id="sugestoesPaciente" class="sugestoes"></div>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="cpf">CPF</label>
+                                <input type="text" id="cpf" class="entrada" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dados Clínicos -->
+                    <div class="secao-formulario">
+                        <h3 class="titulo-secao">Dados Clínicos</h3>
+                        <div class="linha-formulario">
+                            <div class="grupo-formulario">
+                                <label for="dataInicio">Data do Atendimento</label>
+                                <input type="date" id="dataInicio" class="entrada" required>
+                            </div>
+                            <div class="grupo-formulario">
+                                <label for="dias">Dias de Afastamento</label>
+                                <input type="number" id="dias" class="entrada" min="1" required>
+                            </div>
+                        </div>
+
+                        <!-- Sintomas -->
+                        <div class="grupo-formulario">
+                            <label>Sintomas</label>
+                            <div id="botoes-sintomas" class="botoes-template"></div>
+                            <div id="sintomasSelecionados" class="container-chips"></div>
+                            <input type="text" id="outrosSintomas" class="entrada" placeholder="Digite outros sintomas e pressione Enter">
+                        </div>
+
+                        <!-- Diagnósticos -->
+                        <div class="grupo-formulario">
+                            <label>Diagnósticos</label>
+                            <div id="botoes-diagnosticos" class="botoes-template"></div>
+                            <div id="diagnosticosSelecionados" class="container-chips"></div>
+                            <input type="text" id="outroDiagnostico" class="entrada" placeholder="Digite outro diagnóstico e pressione Enter">
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="grupo-formulario">
+                            <label for="observacoes">Observações Adicionais</label>
+                            <textarea id="observacoes" class="area-texto"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="botoes">
+                        <button type="button" class="botao botao-primario botao-visualizar" onclick="visualizarAtestado(event)">Visualizar Atestado</button>
+                        <button type="button" class="botao botao-limpar" onclick="limparFormulario()">Limpar Dados</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Container de Visualização (Direita) -->
+            <section class="container-visualizacao">
+                <div id="mensagemPlaceholder" class="mensagem-placeholder">
+                    <div class="icone-placeholder">📋</div>
+                    <h2>Sistema de Atestados Médicos</h2>
+                    <p>Preencha os campos ao lado para gerar seu atestado.</p>
+                </div>
+                <div id="previewAtestado" class="preview-atestado" style="display: none;"></div>
+                <div id="acoesAtestado" class="acoes-atestado" style="display: none;">
+                    <button type="button" class="botao botao-primario" onclick="gerarPDF()">Gerar PDF</button>
+                    <button type="button" class="botao botao-secundario" onclick="voltarFormulario()">Voltar</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Estilos adicionais para visualização -->
+    <style>
+        /* Container de visualização */
+        .container-visualizacao {
+        position: relative;
+        background: var(--branco);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        height: 100%;
+        }
+
+        .container-visualizacao::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('https://atestado.drguilipech.com/imagensguili/foto-medico.jpg');
+        background-size: cover;
+        background-position: center;
+        opacity: 0.15;
+        z-index: 1;
+        }
+
+        /* Mensagem placeholder */
+        .mensagem-placeholder {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        padding: 2.5rem 2rem;
+        margin: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        }
+
+        .icone-placeholder {
+         width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, var(--primaria) 0%, var(--primaria-clara) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        color: var(--branco);
+        font-size: 1.5rem;
+        }
+
+        /* Preview do atestado */
+        .preview-atestado {
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.95);
+            margin: 2rem;
+            padding: 3rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        /* Ações do atestado */
+        .acoes-atestado {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin: 1rem 2rem 2rem;
+        }
+
+        /* Estilos de impressão */
+        @media print {
+            .container-visualizacao::before {
+                display: none;
+            }
+            
+            .preview-atestado {
+                margin: 0;
+                padding: 2rem;
+                box-shadow: none;
+            }
+
+            .acoes-atestado {
+                display: none;
+            }
+        }
+    </style>
+
+    <!-- Scripts -->
+    <script>
+        // Expandir e melhorar o mapeamento de CIDs
+        const mapeamentoCids = [
+    // SEÇÃO 1: CIDs específicos para sintomas
+    {
+        codigo: 'ME82.0',
+        nome: 'Dor de garganta',
+        sintomas: ['Dor de garganta', 'Odinofagia'],
+        diagnosticos: ['Dor de garganta']
+    },
+    {
+        codigo: 'ME82',
+        nome: 'Tosse',
+        sintomas: ['Tosse', 'Tosse seca', 'Tosse produtiva'],
+        diagnosticos: ['Tosse']
+    },
+    {
+        codigo: 'ME84.Z',
+        nome: 'Dor lombar',
+        sintomas: ['Dor lombar', 'Dor nas costas'],
+        diagnosticos: ['Lombalgia']
+    },
+    {
+        codigo: 'MF50.0',
+        nome: 'Disúria',
+        sintomas: ['Ardência urinária', 'Disúria'],
+        diagnosticos: ['Disúria']
+    },
+    {
+        codigo: 'MB40.Y',
+        nome: 'Cefaleia',
+        sintomas: ['Dor de cabeça', 'Cefaleia'],
+        diagnosticos: ['Cefaleia']
+    },
+    {
+        codigo: 'MD81.0',
+        nome: 'Dor abdominal',
+        sintomas: ['Dor abdominal', 'Dor na barriga'],
+        diagnosticos: ['Dor abdominal']
+    },
+    {
+        codigo: 'MG2Y',
+        nome: 'Náusea e vômito',
+        sintomas: ['Náusea', 'Vômito', 'Enjoo'],
+        diagnosticos: ['Náusea e vômito']
+    },
+    {
+        codigo: 'ME05',
+        nome: 'Febre',
+        sintomas: ['Febre', 'Pirexia'],
+        diagnosticos: ['Febre']
+    },
+    {
+        codigo: 'MG24',
+        nome: 'Diarreia',
+        sintomas: ['Diarreia', 'Evacuações líquidas'],
+        diagnosticos: ['Diarreia']
+    },
+    {
+        codigo: 'MG30',
+        nome: 'Fadiga',
+        sintomas: ['Fadiga', 'Cansaço', 'Fraqueza'],
+        diagnosticos: ['Fadiga']
+    },
+
+    // SEÇÃO 2: CIDs de doenças respiratórias
+    {
+        codigo: 'CA07',
+        nome: 'Nasofaringite aguda',
+        sintomas: ['Coriza', 'Congestão nasal', 'Tosse', 'Dor de garganta'],
+        diagnosticos: ['IVAS', 'Resfriado', 'Nasofaringite']
+    },
+    {
+        codigo: 'RA01.0',
+        nome: 'COVID-19, vírus identificado',
+        sintomas: ['Febre', 'Tosse seca', 'Fadiga', 'Perda de paladar ou olfato', 'Dificuldade respiratória'],
+        diagnosticos: ['COVID-19', 'Coronavírus', 'Infecção por SARS-CoV-2'],
+        priority: 1
+    },
+    {
+        codigo: 'CA40',
+        nome: 'Bronquite aguda',
+        sintomas: ['Tosse', 'Produção de muco', 'Fadiga', 'Falta de ar', 'Febre'],
+        diagnosticos: ['Bronquite', 'Infecção respiratória']
+    },
+    {
+        codigo: 'CA23',
+        nome: 'Sinusite aguda',
+        sintomas: ['Dor facial', 'Congestão nasal', 'Secreção nasal', 'Cefaleia', 'Febre'],
+        diagnosticos: ['Sinusite', 'Infecção dos seios da face']
+    },
+    {
+        codigo: 'CA87',
+        nome: 'Pneumonia bacteriana',
+        sintomas: ['Febre alta', 'Tosse com catarro', 'Falta de ar', 'Dor torácica'],
+        diagnosticos: ['Pneumonia', 'Infecção pulmonar']
+    },
+
+    // SEÇÃO 3: CIDs musculoesqueléticos
+    {
+        codigo: 'FA05',
+        nome: 'Dorsalgia',
+        sintomas: ['Dor nas costas', 'Rigidez', 'Espasmos musculares', 'Dor torácica'],
+        diagnosticos: ['Dor nas costas', 'Dorsalgia']
+    },
+    {
+        codigo: 'FB50',
+        nome: 'Síndrome do túnel do carpo',
+        sintomas: ['Dormência nas mãos', 'Formigamento', 'Fraqueza muscular'],
+        diagnosticos: ['Túnel do carpo', 'Neuropatia periférica']
+    },
+
+    // SEÇÃO 4: CIDs neurológicos
+    {
+        codigo: '8A80',
+        nome: 'Enxaqueca',
+        sintomas: ['Cefaleia', 'Náuseas', 'Sensibilidade à luz', 'Aura'],
+        diagnosticos: ['Enxaqueca', 'Cefaleia migranosa']
+    },
+    {
+        codigo: '8A00',
+        nome: 'Cefaleia tensional',
+        sintomas: ['Dor de cabeça', 'Pressão na cabeça', 'Dor cervical'],
+        diagnosticos: ['Cefaleia tensional', 'Dor de cabeça']
+    },
+
+    // SEÇÃO 5: CIDs gastrointestinais
+    {
+        codigo: 'DA70',
+        nome: 'Gastrite aguda',
+        sintomas: ['Dor abdominal', 'Náuseas', 'Vômitos', 'Indigestão'],
+        diagnosticos: ['Gastrite', 'Inflamação do estômago']
+    },
+    {
+        codigo: 'DB31',
+        nome: 'Gastroenterite viral',
+        sintomas: ['Diarreia', 'Náuseas', 'Vômitos', 'Dor abdominal', 'Febre'],
+        diagnosticos: ['Gastroenterite', 'Infecção intestinal']
+    },
+    {
+        codigo: 'DD50',
+        nome: 'Apendicite aguda',
+        sintomas: ['Dor abdominal', 'Febre', 'Náuseas', 'Vômitos'],
+        diagnosticos: ['Apendicite', 'Inflamação do apêndice']
+    },
+
+    // SEÇÃO 6: CIDs cardiovasculares
+    {
+        codigo: 'BA40',
+        nome: 'Arritmia cardíaca',
+        sintomas: ['Palpitações', 'Tontura', 'Falta de ar', 'Dor torácica'],
+        diagnosticos: ['Arritmia', 'Palpitações']
+    },
+
+    // SEÇÃO 7: CIDs psiquiátricos
+    {
+        codigo: '6A40',
+        nome: 'Transtorno do pânico',
+        sintomas: ['Ataques de pânico', 'Palpitações', 'Sudorese', 'Falta de ar', 'Medo intenso'],
+        diagnosticos: ['Síndrome do pânico', 'Transtorno do pânico']
+    },
+    {
+        codigo: '6A70',
+        nome: 'Episódio depressivo',
+        sintomas: ['Humor deprimido', 'Anedonia', 'Fadiga', 'Distúrbios do sono'],
+        diagnosticos: ['Depressão', 'Transtorno depressivo']
+    },
+
+    // SEÇÃO 8: CIDs infecciosos
+    {
+        codigo: '1A00',
+        nome: 'Varicela',
+        sintomas: ['Erupção cutânea', 'Coceira', 'Febre', 'Mal-estar'],
+        diagnosticos: ['Catapora', 'Varicela']
+    },
+    {
+        codigo: '1A20',
+        nome: 'Dengue',
+        sintomas: ['Febre alta', 'Dor de cabeça', 'Dor atrás dos olhos', 'Dor nas articulações', 'Dor muscular'],
+        diagnosticos: ['Dengue', 'Febre da dengue']
+    },
+
+    // SEÇÃO 9: CIDs geniturinários
+    {
+        codigo: 'GA00',
+        nome: 'Infecção do trato urinário',
+        sintomas: ['Disúria', 'Polaciúria', 'Dor suprapúbica', 'Urgência miccional'],
+        diagnosticos: ['ITU', 'Cistite']
+    },
+
+    // SEÇÃO 10: CIDs dermatológicos
+    {
+        codigo: 'EA80',
+        nome: 'Dermatite atópica',
+        sintomas: ['Coceira', 'Vermelhidão', 'Descamação', 'Lesões cutâneas'],
+        diagnosticos: ['Eczema', 'Dermatite atópica']
+    },
+    {
+        codigo: 'EA90',
+        nome: 'Urticária',
+        sintomas: ['Erupção cutânea', 'Coceira', 'Pápulas', 'Edema'],
+        diagnosticos: ['Urticária', 'Alergia cutânea']
+    },
+
+    // SEÇÃO 11: CIDs sistêmicos
+    {
+        codigo: '4A83',
+        nome: 'Diabetes mellitus tipo 2',
+        sintomas: ['Poliúria', 'Polidipsia', 'Fadiga', 'Visão turva'],
+        diagnosticos: ['Diabetes tipo 2', 'Hiperglicemia']
+    },
+    {
+        codigo: '5A11',
+        nome: 'Hipertensão essencial (primária)',
+        sintomas: ['Pressão alta', 'Cefaleia', 'Tontura', 'Palpitações'],
+        diagnosticos: ['Hipertensão arterial', 'Pressão alta']
+    },
+
+    // SEÇÃO 12: CIDs traumáticos
+    {
+        codigo: 'NA07',
+        nome: 'Traumatismo superficial do ombro',
+        sintomas: ['Dor no ombro', 'Inchaço', 'Hematoma', 'Limitação de movimento'],
+        diagnosticos: ['Trauma no ombro', 'Contusão']
+    },
+    {
+        codigo: 'ND10',
+        nome: 'Fratura do antebraço',
+        sintomas: ['Dor intensa', 'Inchaço', 'Deformidade', 'Perda de função'],
+        diagnosticos: ['Fratura de rádio', 'Fratura de ulna']
+    },
+
+    // SEÇÃO 13: CID padrão
+    {
+        codigo: 'MD90',
+        nome: 'Sintomas e sinais inespecíficos',
+        sintomas: ['Mal-estar', 'Fadiga', 'Dor', 'Febre de origem desconhecida', 'Cefaleia'],
+        diagnosticos: ['Sintomas inespecíficos'],
+        default: true
+    }
+];
+
+        // Dados para autocompletar
+        // Funções para gerenciar histórico
+        
+        // Wrapper para garantir funcionamento do localStorage
+        const storage = {
+            data: {},
+            setItem: function(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch(e) {
+                    this.data[key] = value;
+                    console.log('Usando fallback para armazenamento:', key, value);
+                }
+            },
+            getItem: function(key) {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item || this.data[key];
+                } catch(e) {
+                    return this.data[key];
+                }
+            }
+        };
+
+	function obterHistoricoMedicos() {
+	    const historico = localStorage.getItem('historicoMedicos');
+	    return historico ? JSON.parse(historico) : [];
+	}
+	
+	function obterHistoricoPacientes() {
+	    const historico = localStorage.getItem('historicoPacientes');
+	    return historico ? JSON.parse(historico) : [];
+	}
+	
+	function salvarMedicoNoHistorico(medico) {
+	    const historico = obterHistoricoMedicos();
+	    const existente = historico.find(m => m.crm === medico.crm);
+	    if (!existente) {
+	        historico.push(medico);
+	        localStorage.setItem('historicoMedicos', JSON.stringify(historico));
+	    }
+	}
+	
+	function salvarPacienteNoHistorico(paciente) {
+	    const historico = obterHistoricoPacientes();
+	    const existente = historico.find(p => p.cpf === paciente.cpf);
+	    if (!existente) {
+	        historico.push(paciente);
+	        localStorage.setItem('historicoPacientes', JSON.stringify(historico));
+	    }
+	}
+	
+        // Estado global
+        let sintomasSelecionados = [];
+        let diagnosticosSelecionados = [];
+
+        // Funções utilitárias
+        function formatarData(data, formato = 'simples') {
+            const dataObj = new Date(data);
+            
+            switch (formato) {
+                case 'extenso':
+                    return dataObj.toLocaleDateString('pt-BR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                case 'simples':
+                default:
+                    return dataObj.toLocaleDateString('pt-BR');
+            }
+        }
+
+        function formatarCPF(value) {
+            value = value.replace(/\D/g, ''); // Remove não-números
+            if (value.length > 11) {
+                value = value.slice(0, 11); // Limita a 11 dgitos
+            }
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d{3})?(\d{3})?(\d{2})?/, function(_, p1, p2, p3, p4) {
+                    let result = p1;
+                    if (p2) result += '.' + p2;
+                    if (p3) result += '.' + p3;
+                    if (p4) result += '-' + p4;
+                    return result;
+                });
+            }
+            return value;
+        }
+
+         function obterTodosSintomas() {
+            const todosSintomas = new Set();
+            mapeamentoCids.forEach(cid => {
+                cid.sintomas.forEach(sintoma => todosSintomas.add(sintoma));
+            });
+            return Array.from(todosSintomas).sort();
+        }
+ // Funções de manipulação de sintomas e diagnósticos
+      
+        function obterTodosDiagnosticos() {
+            const todosDiagnosticos = new Set();
+            mapeamentoCids.forEach(cid => {
+                cid.diagnosticos.forEach(diagnostico => todosDiagnosticos.add(diagnostico));
+            });
+            return Array.from(todosDiagnosticos).sort();
+        }
+
+        function encontrarCID(sintomas = [], diagnosticos = []) {
+            console.log('Buscando CID para:', { sintomas, diagnosticos });
+            let melhorCorrespondencia = null;
+            let maiorPontuacao = 0;
+        
+            // PARTE 1: Regra Original - Busca por diagnósticos e sintomas
+            for (const cid of mapeamentoCids) {
+                let pontuacao = 0;
+                
+                // Verificar diagnósticos (peso maior)
+                const diagnosticosCorrespondentes = diagnosticos.filter(d =>
+                    cid.diagnosticos.some(cd => cd.toLowerCase().includes(d.toLowerCase()))
+                ).length;
+                pontuacao += (diagnosticosCorrespondentes / cid.diagnosticos.length) * 0.7;
+                
+                // Verificar sintomas
+                const sintomasCorrespondentes = sintomas.filter(s => 
+                    cid.sintomas.some(cs => cs.toLowerCase().includes(s.toLowerCase()))
+                ).length;
+                pontuacao += (sintomasCorrespondentes / cid.sintomas.length) * 0.3;
+        
+                // Adicionar bônus para CIDs prioritários
+                if (cid.priority) {
+                    pontuacao *= 1.2;
+                }
+        
+                if (pontuacao > maiorPontuacao) {
+                    maiorPontuacao = pontuacao;
+                    melhorCorrespondencia = cid;
+                }
+            }
+        
+            // Se encontrou boa correspondência (>= 1.2), usa ela
+            if (melhorCorrespondencia && maiorPontuacao >= 1.2) {
+                return melhorCorrespondencia;
+            }
+        
+            // PARTE 2: Se não encontrou boa correspondência, busca só por sintomas
+            if (sintomas && sintomas.length > 0) {
+                let melhorCorrespondenciaSintomas = null;
+                let maiorQuantidadeSintomas = 0;
+        
+                // Busca apenas nos CIDs de sintomas (primeiros 10)
+                const cidsSintomas = mapeamentoCids.slice(0, 10);
+                
+                for (const cid of cidsSintomas) {
+                    const sintomasCorrespondentes = sintomas.filter(s => 
+                        cid.sintomas.some(cs => cs.toLowerCase().includes(s.toLowerCase()))
+                    ).length;
+        
+                    if (sintomasCorrespondentes > maiorQuantidadeSintomas) {
+                        maiorQuantidadeSintomas = sintomasCorrespondentes;
+                        melhorCorrespondenciaSintomas = cid;
+                    }
+                }
+        
+                if (melhorCorrespondenciaSintomas && maiorQuantidadeSintomas > 0) {
+                    return melhorCorrespondenciaSintomas;
+                }
+            }
+        
+            // PARTE 3: Se nada funcionar, retorna o CID padrão
+            return mapeamentoCids.find(cid => cid.default) || mapeamentoCids[mapeamentoCids.length - 1];
+        }
+
+        // Funções de manipulação de sintomas e diagnósticos
+        function adicionarSintoma(sintoma) {
+            sintomasSelecionados.push(sintoma);
+            console.log('Sintomas atuais:', sintomasSelecionados);
+            atualizarChipsSintomas();
+        }
+
+        function adicionarDiagnostico(diagnostico) {
+            diagnosticosSelecionados.push(diagnostico);
+            console.log('Diagnósticos atuais:', diagnosticosSelecionados);
+            atualizarChipsDiagnosticos();
+        }
+
+        function removerSintoma(sintoma) {
+            sintomasSelecionados = sintomasSelecionados.filter(s => s !== sintoma);
+            atualizarChipsSintomas();
+        }
+
+        function removerDiagnostico(diagnostico) {
+            diagnosticosSelecionados = diagnosticosSelecionados.filter(d => d !== diagnostico);
+            atualizarChipsDiagnosticos();
+        }
+
+        // Funções de atualização visual
+        function atualizarChipsSintomas() {
+            const container = document.getElementById('sintomasSelecionados');
+            container.innerHTML = sintomasSelecionados
+                .map(s => `<div class="chip">${s}<button type="button" onclick="removerSintoma('${s}')">×</button></div>`)
+                .join('');
+            atualizarAreaTexto();
+        }
+
+        function atualizarChipsDiagnosticos() {
+            const container = document.getElementById('diagnosticosSelecionados');
+            container.innerHTML = diagnosticosSelecionados
+                .map(d => `<div class="chip">${d}<button type="button" onclick="removerDiagnostico('${d}')">×</button></div>`)
+                .join('');
+            atualizarAreaTexto();
+        }
+
+        function atualizarAreaTexto() {
+            const outrosSintomas = document.getElementById('outrosSintomas').value;
+            const outroDiagnostico = document.getElementById('outroDiagnostico').value;
+            const observacoes = document.getElementById('observacoes');
+            
+            const texto = [
+                sintomasSelecionados.length ? `Sintomas principais: ${sintomasSelecionados.join(', ')}` : '',
+                outrosSintomas ? `Outros sintomas: ${outrosSintomas}` : '',
+                diagnosticosSelecionados.length ? `Diagnósticos principais: ${diagnosticosSelecionados.join(', ')}` : '',
+                outroDiagnostico ? `Outros diagnósticos: ${outroDiagnostico}` : ''
+            ].filter(Boolean).join('\n');
+            
+            if (!observacoes.value || observacoes.value.startsWith('Sintomas principais:')) {
+                observacoes.value = texto;
+            }
+        }
+
+        // Funções de autocompletar
+        function mostrarSugestoes(input, sugestoes, listaSugestoes, tipo) {
+            const valor = input.value.toLowerCase();
+            const correspondencias = sugestoes.filter(item => 
+                item.nome.toLowerCase().includes(valor)
+            );
+
+            if (valor && correspondencias.length > 0) {
+                listaSugestoes.innerHTML = correspondencias
+                    .map(item => `<div class="item-sugestao" onclick="selecionarItem('${item.nome}', '${item[tipo]}', '${tipo}')">${item.nome}</div>`)
+                    .join('');
+                listaSugestoes.style.display = 'block';
+            } else {
+                listaSugestoes.style.display = 'none';
+            }
+        }
+
+        function selecionarItem(nome, valor, tipo) {
+            document.getElementById(tipo === 'crm' ? 'medico' : 'paciente').value = nome;
+            document.getElementById(tipo === 'crm' ? 'crm' : 'cpf').value = valor;
+            document.getElementById(`sugestoes${tipo === 'crm' ? 'Medico' : 'Paciente'}`).style.display = 'none';
+        }
+
+        // Função para gerar HTML do atestado
+        function gerarHtmlAtestado(dados) {
+            const cid = encontrarCID(dados.sintomas, dados.diagnosticos);
+            const iniciais = dados.medico.split(' ').map(n => n[0]).join('');
+            
+            // Texto principal baseado no tipo de atestado
+            let textoPrincipal;
+            if (dados.tipo === 'atividade') {
+                textoPrincipal = `
+                    <p class="texto-principal">
+                        Atesto que o(a) paciente <strong>${dados.paciente}</strong>, 
+                        portador(a) do CPF ${dados.cpf}, não apresenta contraindicações 
+                        para a prática de atividade física em caráter não competitivo.
+                    </p>
+                `;
+            } else {
+                textoPrincipal = `
+                    <p class="texto-principal">
+                        Atesto, com base em dados coletados em consulta médica, que o(a) paciente 
+                        <strong>${dados.paciente}</strong>, portador(a) do CPF ${dados.cpf}, 
+                        necessita de afastamento de suas atividades por <strong>${dados.dias} dia(s)</strong> 
+                        a partir de ${formatarData(dados.dataInicio, 'extenso')}, devido a condição médica 
+                        descrita abaixo.
+                    </p>
+                `;
+            }
+
+            return `
+                <div class="atestado-container">
+                    <div class="atestado-header">
+                        <h1>ATESTADO MÉDICO</h1>
+                        <div class="info-medico">
+                            <p><strong>Dr(a). ${dados.medico}</strong></p>
+                            <p>CRM: ${dados.crm}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="atestado-content">
+                        ${textoPrincipal}
+
+                        ${dados.tipo !== 'atividade' ? `
+                            <div class="cid-info">
+                                <strong>Classificação Internacional de Doenças (CID-11):</strong><br>
+                                ${cid.codigo} - ${cid.nome}
+                            </div>
+                        ` : ''}
+
+                        ${dados.observacoes ? `
+                            <div class="observacoes">
+                                <strong>Observações:</strong><br>
+                                ${dados.observacoes}
+                            </div>
+                        ` : ''}
+
+                        <div class="data-local">
+                            <p class="texto-principal" style="text-align: right; margin-top: 40px;">
+                                ${formatarData(new Date(), 'extenso')}
+                            </p>
+                        </div>
+
+                        <div class="assinatura-medico">
+                            <div class="linha-assinatura">
+                                <span class="rubrica">${iniciais}</span>
+                            </div>
+                            <div class="info-assinatura">
+                                Dr(a). ${dados.medico}<br>
+                                CRM: ${dados.crm}
+                            </div>
+                        </div>
+
+                        <div class="autorizacao-paciente">
+                            <p>* Paciente autoriza divulgação dos seus sintomas e diagnósticos</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Funções principais de manipulação do atestado
+        function gerarAtestado() {
+            const formulario = document.getElementById('formularioAtestado');
+            
+            if (!formulario.checkValidity()) {
+                formulario.reportValidity();
+                return;
+            }
+
+            const dados = {
+                tipo: document.getElementById('tipoAtestado').value,
+                medico: document.getElementById('medico').value,
+                crm: document.getElementById('crm').value,
+                paciente: document.getElementById('paciente').value,
+                cpf: document.getElementById('cpf').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                dias: document.getElementById('dias').value,
+                sintomas: sintomasSelecionados,
+                outrosSintomas: document.getElementById('outrosSintomas').value,
+                diagnosticos: diagnosticosSelecionados,
+                outroDiagnostico: document.getElementById('outroDiagnostico').value,
+                observacoes: document.getElementById('observacoes').value
+            };
+
+            const preview = document.getElementById('previewAtestado');
+            preview.innerHTML = gerarHtmlAtestado(dados);
+            
+            document.getElementById('mensagemPlaceholder').style.display = 'none';
+            preview.style.display = 'block';
+            document.getElementById('acoesAtestado').style.display = 'flex';
+            
+            // Adicionar classe para animação
+            setTimeout(() => {
+                preview.classList.add('mostrar');
+            }, 100);
+        }
+
+        // Função para gerar PDF
+        async function gerarPDF() {
+            try {
+                const elementoAtestado = document.getElementById('previewAtestado');
+                
+                // Usar html2canvas para converter o HTML em imagem
+                const canvas = await html2canvas(elementoAtestado, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+
+                // Criar novo PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // Dimensões da página A4
+                const larguraPagina = pdf.internal.pageSize.getWidth();
+                const alturaPagina = pdf.internal.pageSize.getHeight();
+                
+                // Calcular dimenses mantendo proporção
+                const proporcao = canvas.width / canvas.height;
+                let larguraImagem = larguraPagina - 20;
+                let alturaImagem = larguraImagem / proporcao;
+                
+                // Ajustar se altura ultrapassar limite
+                if (alturaImagem > alturaPagina - 20) {
+                    alturaImagem = alturaPagina - 20;
+                    larguraImagem = alturaImagem * proporcao;
+                }
+                
+                // Adicionar imagem ao PDF
+                const imagem = canvas.toDataURL('image/jpeg', 1.0);
+                pdf.addImage(imagem, 'JPEG', 
+                    (larguraPagina - larguraImagem) / 2,
+                    10,
+                    larguraImagem, 
+                    alturaImagem
+                );
+
+                // Adicionar informações no rodap
+                pdf.setFontSize(8);
+                const dataAtual = formatarData(new Date(), 'extenso');
+                pdf.text(`Documento gerado em ${dataAtual}`, 10, alturaPagina - 10);
+
+                // Gerar nome do arquivo
+                const nomePaciente = document.getElementById('paciente').value.replace(/\s+/g, '_').toLowerCase();
+                const dataArquivo = new Date().toISOString().split('T')[0];
+                const nomeArquivo = `atestado_${nomePaciente}_${dataArquivo}.pdf`;
+
+                // Salvar PDF
+                pdf.save(nomeArquivo);
+
+            } catch (erro) {
+                console.error('Erro ao gerar PDF:', erro);
+                alert('Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
+            }
+        }
+
+        // Função para limpar formulário
+        function limparFormulario() {
+            document.getElementById('formularioAtestado').reset();
+            sintomasSelecionados = [];
+            diagnosticosSelecionados = [];
+            atualizarChipsSintomas();
+            atualizarChipsDiagnosticos();
+            
+            const preview = document.getElementById('previewAtestado');
+            preview.style.display = 'none';
+            document.getElementById('mensagemPlaceholder').style.display = 'flex';
+            document.getElementById('acoesAtestado').style.display = 'none';
+        }
+
+        // Função para voltar ao formulário
+        function voltarFormulario() {
+            // Restaurar opacidade ao voltar
+            const containerVisualizacao = document.querySelector('.container-visualizacao');
+            containerVisualizacao.style.setProperty('--opacity-background', '0.8');
+            
+            const preview = document.getElementById('previewAtestado');
+            const mensagemPlaceholder = document.getElementById('mensagemPlaceholder');
+            
+            preview.style.display = 'none';
+            mensagemPlaceholder.style.display = 'block';
+            document.getElementById('acoesAtestado').style.display = 'none';
+        }
+
+        // Inicialização
+        function inicializarBotoesSintomas() {
+            const sintomas = obterTodosSintomas();
+            const containerSintomas = document.getElementById('botoes-sintomas');
+            
+            sintomas.forEach(sintoma => {
+                const botao = document.createElement('button');
+                botao.type = 'button';
+                botao.className = 'botao-template';
+                botao.textContent = sintoma;
+                botao.onclick = () => adicionarSintoma(sintoma);
+                containerSintomas.appendChild(botao);
+            });
+        }
+
+        function inicializarBotoesDiagnosticos() {
+            const diagnosticos = obterTodosDiagnosticos();
+            const containerDiagnosticos = document.getElementById('botoes-diagnosticos');
+            
+            diagnosticos.forEach(diagnostico => {
+                const botao = document.createElement('button');
+                botao.type = 'button';
+                botao.className = 'botao-template';
+                botao.textContent = diagnostico;
+                botao.onclick = () => adicionarDiagnostico(diagnostico);
+                containerDiagnosticos.appendChild(botao);
+            });
+        }
+
+        // Event listeners e inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            inicializarBotoesSintomas();
+            inicializarBotoesDiagnosticos();
+
+            document.getElementById('medico').addEventListener('input', function(e) {
+                mostrarSugestoes(this, medicosCadastrados, document.getElementById('sugestoesMedico'), 'crm');
+            });
+
+            document.getElementById('paciente').addEventListener('input', function(e) {
+                mostrarSugestoes(this, pacientesCadastrados, document.getElementById('sugestoesPaciente'), 'cpf');
+            });
+
+            document.getElementById('dataInicio').addEventListener('input', function(e) {
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                const dataSelecionada = new Date(e.target.value);
+                
+                if (dataSelecionada > hoje) {
+                    alert('A data não pode ser futura');
+                    e.target.value = hoje.toISOString().split('T')[0];
+                }
+            });
+
+            document.getElementById('cpf').addEventListener('input', function(e) {
+                e.target.value = formatarCPF(e.target.value);
+            });
+
+            // Adicionar event listeners para os campos de entrada manual
+            document.getElementById('outrosSintomas').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    adicionarSintomaManual();
+                }
+            });
+
+            document.getElementById('outroDiagnostico').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    adicionarDiagnosticoManual();
+                }
+            });
+
+            // Atualizar os placeholders para indicar a funcionalidade
+            document.getElementById('outrosSintomas').placeholder = 'Digite outros sintomas e pressione Enter';
+            document.getElementById('outroDiagnostico').placeholder = 'Digite outro diagnóstico e pressione Enter';
+
+            // Event listeners para autocompletar
+            document.getElementById('medico').addEventListener('input', function() {
+                mostrarSugestoes(this, 'medico');
+            });
+
+            document.getElementById('paciente').addEventListener('input', function() {
+                mostrarSugestoes(this, 'paciente');
+            });
+        });
+
+        // Atualizar as funções de manipulação de entrada
+        function adicionarSintomaManual() {
+            const input = document.getElementById('outrosSintomas');
+            const sintoma = input.value.trim();
+            
+            if (sintoma) {
+                adicionarSintoma(sintoma);
+                input.value = ''; // Limpa o campo após adicionar
+            }
+        }
+
+        function adicionarDiagnosticoManual() {
+            const input = document.getElementById('outroDiagnostico');
+            const diagnostico = input.value.trim();
+            
+            if (diagnostico) {
+                adicionarDiagnostico(diagnostico);
+                input.value = ''; // Limpa o campo após adicionar
+            }
+        }
+
+        // Funções para gerenciar histórico
+        function salvarHistorico(dados) {
+            const historico = {
+                medico: dados.medico,
+                crm: dados.crm,
+                paciente: dados.paciente,
+                cpf: dados.cpf
+            };
+
+            // Salvar médico
+            const medicosSalvos = JSON.parse(localStorage.getItem('historicoMedicos') || '[]');
+            if (!medicosSalvos.some(m => m.crm === dados.crm)) {
+                medicosSalvos.push({ nome: dados.medico, crm: dados.crm });
+                localStorage.setItem('historicoMedicos', JSON.stringify(medicosSalvos));
+            }
+
+            // Salvar paciente
+            const pacientesSalvos = JSON.parse(localStorage.getItem('historicoPacientes') || '[]');
+            if (!pacientesSalvos.some(p => p.cpf === dados.cpf)) {
+                pacientesSalvos.push({ nome: dados.paciente, cpf: dados.cpf });
+                localStorage.setItem('historicoPacientes', JSON.stringify(pacientesSalvos));
+            }
+        }
+
+	function mostrarSugestoes(input, tipo) {
+	    const valor = input.value.toLowerCase();
+	    const historico = JSON.parse(localStorage.getItem(
+	        tipo === 'medico' ? 'historicoMedicos' : 'historicoPacientes'
+	    ) || '[]');
+	    
+	    const listaSugestoes = document.getElementById(`sugestoes${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+	    
+	    if (valor && historico.length > 0) {
+	        const correspondencias = historico.filter(item => 
+	            item.nome.toLowerCase().includes(valor) || 
+	            (tipo === 'medico' ? item.crm : item.cpf).toLowerCase().includes(valor)
+	        );
+	
+	        if (correspondencias.length > 0) {
+	            listaSugestoes.innerHTML = correspondencias
+	                .map(item => `
+	                    <div class="item-sugestao" onclick="selecionarItem('${item.nome}', '${tipo === 'medico' ? item.crm : item.cpf}', '${tipo}')">
+	                        ${item.nome} (${tipo === 'medico' ? 'CRM: ' : 'CPF: '}${tipo === 'medico' ? item.crm : item.cpf})
+	                    </div>
+	                `).join('');
+	            listaSugestoes.style.display = 'block';
+	        } else {
+	            listaSugestoes.style.display = 'none';
+	        }
+	    } else {
+	        listaSugestoes.style.display = 'none';
+	    }
+	}
+	
+	function selecionarItem(nome, documento, tipo) {
+	    if (tipo === 'medico') {
+	        document.getElementById('medico').value = nome;
+	        document.getElementById('crm').value = documento;
+	    } else {
+	        document.getElementById('paciente').value = nome;
+	        document.getElementById('cpf').value = documento;
+	    }
+    
+    	// Esconde a lista de sugestões
+    	document.getElementById(`sugestoes${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).style.display = 'none';
+	}
+
+	// Adicionar os event listeners
+	document.addEventListener('DOMContentLoaded', function() {
+	    const campoMedico = document.getElementById('medico');
+	    const campoPaciente = document.getElementById('paciente');
+	
+	    if (campoMedico) {
+	        campoMedico.addEventListener('input', function() {
+	            mostrarSugestoes(this, 'medico');
+	        });
+	    }
+	
+	    if (campoPaciente) {
+	        campoPaciente.addEventListener('input', function() {
+	            mostrarSugestoes(this, 'paciente');
+	        });
+	    }
+	
+	    // Fechar sugestões ao clicar fora
+	    document.addEventListener('click', function(e) {
+	        if (!e.target.closest('.item-sugestao')) {
+	            const sugestoesMedico = document.getElementById('sugestoesMedico');
+	            const sugestoesPaciente = document.getElementById('sugestoesPaciente');
+	            if (sugestoesMedico) sugestoesMedico.style.display = 'none';
+	            if (sugestoesPaciente) sugestoesPaciente.style.display = 'none';
+	        }
+	    });
+	});
+
+        function visualizarAtestado(event) {
+            if (event) event.preventDefault();
+            
+            // 1. Validar sintomas obrigatórios
+            if (sintomasSelecionados.length === 0) {
+                alert('Por favor, selecione pelo menos um sintoma');
+                return;
+            }
+            
+            // 2. Validar campos obrigatórios
+            const camposObrigatorios = [
+                'tipoAtestado',
+                'medico',
+                'crm',
+                'paciente',
+                'cpf',
+                'dataInicio',
+                'dias'
+            ];
+            
+            const todosPreenchidos = camposObrigatorios.every(campo => {
+                const elemento = document.getElementById(campo);
+                return elemento && elemento.value.trim() !== '';
+            });
+        
+            if (!todosPreenchidos) {
+                alert('Por favor, preencha todos os campos obrigatórios');
+                return;
+            }
+        
+            // 3. Coletar dados do formulário
+            const dados = {
+                tipo: document.getElementById('tipoAtestado').value,
+                medico: document.getElementById('medico').value,
+                crm: document.getElementById('crm').value,
+                paciente: document.getElementById('paciente').value,
+                cpf: document.getElementById('cpf').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                dias: document.getElementById('dias').value,
+                sintomas: sintomasSelecionados,      // Obrigatório
+                diagnosticos: diagnosticosSelecionados || [], // Opcional
+                observacoes: document.getElementById('observacoes').value
+            };
+        
+            // 4. Atualizar visualização
+            const containerVisualizacao = document.querySelector('.container-visualizacao');
+            const preview = document.getElementById('previewAtestado');
+            const mensagemPlaceholder = document.getElementById('mensagemPlaceholder');
+            const acoesAtestado = document.getElementById('acoesAtestado');
+        
+            // 5. Diminuir opacidade do background
+            containerVisualizacao.style.setProperty('--opacity-background', '0.3');
+        
+            // 6. Gerar HTML do atestado
+            preview.innerHTML = gerarHtmlAtestado(dados);
+            
+            // 7. Atualizar UI
+            mensagemPlaceholder.style.display = 'none';
+            preview.style.display = 'block';
+            acoesAtestado.style.display = 'flex';
+        
+            // 8. Adicionar animações
+            requestAnimationFrame(() => {
+                preview.classList.add('mostrar');
+                containerVisualizacao.classList.add('com-atestado');
+            });
+        
+            // 9. Salvar no histórico
+            salvarMedicoNoHistorico({
+                nome: dados.medico,
+                crm: dados.crm
+            });
+        
+            salvarPacienteNoHistorico({
+                nome: dados.paciente,
+                cpf: dados.cpf
+            });
+        }    
+        
+        // Adicionar o event listener ao botão
+        document.addEventListener('DOMContentLoaded', function() {
+            const botaoVisualizar = document.querySelector('.botao-visualizar');
+            if (botaoVisualizar) {
+                botaoVisualizar.addEventListener('click', visualizarAtestado);
+            }
+        });
+
+        // Garantir que as sugestões sejam ocultadas quando não necessárias
+        document.addEventListener('click', function(e) {
+            const sugestoes = document.querySelectorAll('.sugestoes');
+            sugestoes.forEach(s => s.style.display = 'none');
+        });
+
+        // Estilos para a transição
+        const style = document.createElement('style');
+        style.textContent = `
+            .preview-atestado {
+                transition: all 0.3s ease-in-out;
+                transform: scale(0.95);
+                opacity: 0;
+                width: 210mm; /* Largura A4 */
+                min-height: 297mm; /* Altura A4 */
+                margin: 20px auto;
+                padding: 40px 60px;
+                background: white;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                font-family: 'Times New Roman', Times, serif;
+            }
+
+            .preview-atestado.mostrar {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            .container-visualizacao {
+                transition: opacity 0.3s ease-in-out;
+            }
+        `;
+        document.head.appendChild(style);
+
+        function gerarModeloAtestado(dados) {
+            console.log('Dados recebidos:', dados);  // ADICIONE ESTA LINHA
+            const cid = encontrarCID(dados.sintomas, dados.diagnosticos);
+            console.log('CID encontrado:', cid);     // ADICIONE ESTA LINHA
+            const iniciais = dados.medico.split(' ').map(n => n[0]).join('');
+            
+            return `
+                <div class="atestado-container">
+                    <div class="atestado-header">
+                        <h1>ATESTADO MÉDICO</h1>
+                        <div class="info-medico">
+                            <p><strong>Dr(a). ${dados.medico}</strong></p>
+                            <p>CRM: ${dados.crm}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="atestado-content">
+                        <p class="texto-principal">
+                            Atesto para os devidos fins que o(a) paciente <strong>${dados.paciente}</strong>,
+                            portador(a) do CPF ${dados.cpf}, necessita de afastamento de suas atividades por
+                            <strong>${dados.dias} dia(s)</strong> a partir de ${formatarData(dados.dataInicio, 'extenso')},
+                            devido a condição médica${cid ? ` (CID: ${cid.codigo})` : ''}.
+                        </p>
+
+                        ${dados.observacoes ? `
+                        <div class="observacoes">
+                            <p>${dados.observacoes}</p>
+                        </div>
+                        ` : ''}
+
+                        <div class="data-local">
+                            <p>${formatarData(new Date(), 'extenso')}</p>
+                        </div>
+
+                        <div class="assinatura-medico">
+                            <div class="linha-assinatura">
+                                <span class="rubrica">${iniciais}</span>
+                            </div>
+                            <p>Dr(a). ${dados.medico}</p>
+                            <p>CRM: ${dados.crm}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function gerarCarimboDigital(medico, crm) {
+            return `
+                <div class="carimbo-digital">
+                    <div class="carimbo-borda">
+                        <div class="carimbo-conteudo">
+                            <img src="assets/caduceu.svg" class="carimbo-simbolo">
+                            <div class="carimbo-texto">
+                                <strong>${medico}</strong>
+                                CRM ${crm}
+                                <div class="carimbo-especialidade">${especialidade}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Lista de sintomas e diagnósticos comuns para os botões
+        const sintomasComuns = [
+            'Febre', 'Dor de cabeça', 'Tosse', 'Fadiga', 
+            'Dor de garganta', 'Congestão nasal', 'Dor muscular',
+            'Falta de ar', 'Náusea', 'Diarreia', 'Dor abdominal',
+            'Perda de olfato', 'Perda de paladar'
+        ];
+
+        const diagnosticosComuns = [
+            'Gripe', 'Resfriado', 'COVID-19', 'Sinusite',
+            'Amigdalite', 'Gastroenterite', 'Enxaqueca',
+            'Lombalgia', 'Ansiedade', 'Estresse'
+        ];
+
+        // Função para criar botões de sintomas
+        function inicializarBotoesSintomas() {
+            const containerSintomas = document.getElementById('botoes-sintomas');
+            if (!containerSintomas) return;
+            
+            containerSintomas.innerHTML = sintomasComuns
+                .map(sintoma => `
+                    <button type="button" 
+                            class="botao-template" 
+                            data-tipo="sintoma"
+                            onclick="adicionarSintoma('${sintoma}')">
+                        ${sintoma}
+                    </button>
+                `).join('');
+        }
+
+        // Função para criar botões de diagnósticos
+        function inicializarBotoesDiagnosticos() {
+            const containerDiagnosticos = document.getElementById('botoes-diagnosticos');
+            if (!containerDiagnosticos) return;
+            
+            containerDiagnosticos.innerHTML = diagnosticosComuns
+                .map(diagnostico => `
+                    <button type="button" 
+                            class="botao-template" 
+                            data-tipo="diagnostico"
+                            onclick="adicionarDiagnostico('${diagnostico}')">
+                        ${diagnostico}
+                    </button>
+                `).join('');
+        }
+
+        // Formatação do CPF brasileiro
+        function formatarCPF(cpf) {
+            cpf = cpf.replace(/\D/g, ''); // Remove tudo que não é número
+            cpf = cpf.slice(0, 11); // Limita a 11 dígitos
+            
+            return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/g, '$1.$2.$3-$4');
+        }
+
+        // Inicializar eventos de entrada
+        function inicializarEventosEntrada() {
+            // CPF com formatação brasileira
+            const campoCPF = document.getElementById('cpf');
+            if (campoCPF) {
+                campoCPF.addEventListener('input', function(e) {
+                    let valor = e.target.value.replace(/\D/g, '');
+                    if (valor.length > 11) valor = valor.slice(0, 11);
+                    
+                    // Formatação do CPF
+                    if (valor.length <= 11) {
+                        valor = valor.replace(/(\d{3})(\d{3})?(\d{3})?(\d{2})?/, function(_, p1, p2, p3, p4) {
+                            let resultado = p1;
+                            if (p2) resultado += '.' + p2;
+                            if (p3) resultado += '.' + p3;
+                            if (p4) resultado += '-' + p4;
+                            return resultado;
+                        });
+                    }
+                    
+                    e.target.value = valor;
+                });
+            }
+
+            // Campos de entrada manual de sintomas e diagnósticos
+            const campoOutrosSintomas = document.getElementById('outrosSintomas');
+            if (campoOutrosSintomas) {
+                campoOutrosSintomas.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const sintoma = this.value.trim();
+                        if (sintoma) {
+                            adicionarSintoma(sintoma);
+                            this.value = '';
+                        }
+                    }
+                });
+            }
+
+            const campoOutrosDiagnosticos = document.getElementById('outroDiagnostico');
+            if (campoOutrosDiagnosticos) {
+                campoOutrosDiagnosticos.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const diagnostico = this.value.trim();
+                        if (diagnostico) {
+                            adicionarDiagnostico(diagnostico);
+                            this.value = '';
+                        }
+                    }
+                });
+            }
+        }
+
+        // Atualizar a função de inicialização principal
+        document.addEventListener('DOMContentLoaded', function() {
+            inicializarBotoesSintomas();
+            inicializarBotoesDiagnosticos();
+            inicializarEventosEntrada();
+            inicializarAutocompletar();
+            carregarHistorico();
+        });
+    </script>
+</body>
